@@ -1,5 +1,5 @@
 ---
-title: "Hypothesis Testing"
+title: "Data Science Pipeline Tutorial: Coronavirus Edition"
 author: "Everett Brown, Samantha Hilbert, Brendan Cron"
 date: "5/18/2020"
 output: html_document
@@ -19,11 +19,11 @@ library(rvest)
 ## Introduction
 
 Welcome to the world of data science! This webpage will give you a walkthrough of some of the core concepts. This project is written in the language of R but should be explained in enough detail so someone that has never seen R can easily follow. 
-The data we will be monitoring is coronavirus and how it has affected different aspects of our lives. We will look at everthing from dates that states start quarentine to how many people google searched how to make sourdough bread. Hope you enjoy!
+The data we will be monitoring is coronavirus and how it has affected different aspects of our lives. We will look at everthing from dates that different states start quarentine to how many people google searched how to make sourdough bread. Hope you enjoy!
 
 ## Data Curation, Parsing, and Management
 The first part of data science is collecting data. This can be done manually with surveys but it is much more efficient to look for an existing dataset on the internet. There are many ways that we can get the data, 2 of those ways that we will look at is using a comma seperated value (CSV) file or through webscraping.
-Lets first look at how to get data from a CSv. For this example we grabbed a dataset from https://github.com/nytimes/covid-19-data and read it into a dataframe which is how we will manage the data for the rest of the project. This CSV contains data about covid cases for each state
+Lets first look at how to get data from a CSV. For this example we grabbed a dataset from https://github.com/nytimes/covid-19-data and read it into a dataframe which is how we will manage the data for the rest of the project. This CSV contains data about covid cases for each state
 
 ```{r}
 #if you want to update data, uncomment the following line
@@ -39,7 +39,7 @@ state_codes <- read_csv(paste(getwd(), "/state_codes.csv", sep = "")) %>%
     mutate(Code = paste("US-",Code,sep=""))
 ```
 
-Our dataframe is not in the best format for us to use however. There are some things that we should change in order to handle the data better. We are going to mutate the dates in the table to have a datetime format and filter all of the state codes so they have state names instead.
+Our dataframe is not in the best format for us to use right now. There are some things that we should change in order to handle the data better. We are going to mutate the dates in the table to have a datetime format and filter all of the state codes so they have state names instead.
 
 ```{r}
 corona_state_data_formatted <- raw_corona_state_data %>%
@@ -49,7 +49,7 @@ corona_state_data_formatted <- raw_corona_state_data %>%
 ```
 
 ## Webscraping
-Another way that data scientists can grab data is from websites. Unfortunately, this data does not always come in a nice format like CSV files do so we have to fuss with the data more. For this example we are using data from the Wikipeadia page https://en.wikipedia.org/wiki/U.S._state_and_local_government_response_to_the_COVID-19_pandemic which has information about different states reactions to the coronavirus pandemic. We are especially curious about the dates that different states declared a stay at home order and how that descision has affected different aspects of our lives as well as how it affected the spread of coronavirus.
+Another way that data scientists can grab data is from websites. Unfortunately, this data does not always come in a nice format like CSV files do so we have to fuss with the data more. For this example we are using data from the Wikipedia page https://en.wikipedia.org/wiki/U.S._state_and_local_government_response_to_the_COVID-19_pandemic which has information about different states reactions to the coronavirus pandemic. We are especially curious about the dates that different states declared a stay at home order and how that descision has affected different aspects of our lives as well as how it affected the spread of coronavirus.
 Here we simply read the html table from the webpage and insert that data into another dataframe
 ```{r}
 url <- "https://en.wikipedia.org/wiki/U.S._state_and_local_government_response_to_the_COVID-19_pandemic"
@@ -58,7 +58,7 @@ raw_lockdown_data <-  url %>% read_html() %>%
     html_table(fill = TRUE) 
 ```
 
-Just like above the data is not in the best format. We are going to tidy up the dataframe in order for us to use it much easier in the future. Here we do that by organizing the table first by state and then we will make sure the dates are in the correct format.
+Just like above, the data is not in the best format. We are going to tidy up the dataframe in order for us to use it much easier in the future. Here we do that by organizing the table first by state and then we will make sure the dates are in the correct format.
 ```{r}
 lockdown_data <- raw_lockdown_data %>%
     setNames(make.names(names(.), unique = TRUE)) %>% 
@@ -71,7 +71,7 @@ lockdown_data <- lockdown_data %>%
 ```
 
 ##Joining dataframes
-One of the most important concepts of data science is joining dataframes. When we want to compare data from 2 different areas usually it is difficult to find a CSV that has data on both datasets. What we do instead is find 2 dataframes with similar attributes and perform a join on the dataframes effectively merging the data. For this example we will merge together the state data we got from the CSV and the lockdown data that we scraped from Wikipedia. The attribute that we will join on is the state.
+One of the most important concepts of data science is joining dataframes. When we want to compare data from 2 different areas usually it is difficult to find a CSV that already has data on both datasets. What we do instead is find 2 dataframes with similar attributes and perform a join on the dataframes effectively merging the data. For this example we will merge together the state data we got from the CSV and the lockdown data that we scraped from Wikipedia. The attribute that we will join on is the state.
 
 ```{r}
 full_state_data <- corona_state_data_formatted %>%
@@ -79,7 +79,7 @@ full_state_data <- corona_state_data_formatted %>%
     mutate(in_lockdown = ifelse(is.na(lockdown_start), F, ifelse(date >= lockdown_start, T,F)))
 ```
 
-Another area that we want to look at for our project is google trends. This will give us search records for what people searched during which periods of time. This can give us insights on peoples behaviors and also interests. Luckily google provides easy methods to download a CSV with this data but to make our code less repetitive, below we made a function that takes in a term and returns a dataframe containing the data for each term and the popularity of that term for each state. 
+Another area that we want to look at for our project is google trends. This will give us search records for what people searched during which periods of time. This can give us insights on people's behaviors and also interests. Luckily google provides easy methods to download a CSV with this data but to make our code less repetitive, below we made a function that takes in a term and returns a dataframe containing the data for each term and the popularity of that term for each state. 
 
 ```{r}
 get_term <- function(term){
@@ -109,7 +109,7 @@ get_term <- function(term){
 ```
 Note: only data from last 90 days is included
 
-Now we use this function about to create new dataframes with all of the data from the trends. We noticed pulling the data from google takes a while, expect 20-30 seconds per term. Additionally sometimes it just fails, the gtrends() doesn't always work.The two trends that we will specifically look at are coronavirus and sourdough.
+Now we use this function above to create new dataframes with all of the data from the trends. We noticed pulling the data from google takes a while, expect 20-30 seconds per term. Additionally sometimes it just fails, the gtrends() doesn't always work. The two trends that we will specifically look at are coronavirus and sourdough.
 
 ```{r, eval=FALSE}
 #coronavirus_term <- get_term("coronavirus")
@@ -119,7 +119,7 @@ Now we use this function about to create new dataframes with all of the data fro
 #zoom_term <- get_term("zoom")
 ```
 
-Unfortunately this code chunk above didn't seem to be the most reliable not from our code but sometimes google trends got flooded with requests and failed. Our solution to this was run each term but ultimately save the data as a csv and just read it from that. The above code technically works however it can be inconsistent
+Unfortunately this code chunk above didn't seem to be the most reliable, not due to our code, but sometimes google trends got flooded with requests and failed. Our solution to this was run each term but ultimately save the data as a csv and just read it from that. The above code technically works however it can be inconsistent
 
 ```{r, eval=FALSE}
 write.csv(coronavirus_term,"coronavirus_term.csv",row.names = FALSE)
@@ -129,7 +129,7 @@ write.csv(ticketmaster_term,"ticketmaster_term.csv",row.names = FALSE)
 write.csv(zoom_term,"zoom_term.csv",row.names = FALSE)
 ```
 
-Here is the code from when we actually run the code in order to be more consistent. Remeber this code is completely optional we just did it so our code would run faster on average case
+Here is the code from when we actually run the code in order to be more consistent. Remember this code is completely optional we just did it so our code would run faster on average case
 
 ```{r}
 coronavirus_term <- read_csv(paste(getwd(), "/coronavirus_term.csv", sep = ""))
@@ -151,7 +151,7 @@ corona_state_data <-  corona_state_data %>% left_join(zoom_term, by = c("state",
 corona_state_data
 ```
 
-One last thing we will do to our dataframe is add some normalized data which we will use later on in the project. Normalizing data is just a fancy way of saying that we're changing the rage of the data but keeping the distribution shape. in this case we are putting the cases and deaths on a zero to 100 scale so we can more easily reference them in the future in comparison to trends which also exist on a zero to 100 scale.
+One last thing we will do to our dataframe is add some normalized data which we will use later on in the project. Normalizing data is just a fancy way of saying that we're changing the range of the data but keeping the distribution shape. In this case we are putting the cases and deaths on a zero to 100 scale so we can more easily reference them in the future in comparison to trends which also exist on a zero to 100 scale. You can visit this youtube link to learn more about data normalization in R: https://www.youtube.com/watch?v=hot0Wxt9lpQ
 
 ```{r}
 corona_state_data <- corona_state_data %>%
@@ -165,7 +165,7 @@ corona_state_data <- corona_state_data %>%
 ```
 
 ## Exploratory data analysis
-Great now we have all of our data! what can we do with it? One thing that we can do is visualize it in order to better understand the bigger trends of the data. The first thing we can look at each states covid cases and how the infection rate changed after a stay at home order was put into place.
+Great! Now we have all of our data! what can we do with it? One thing that we can do is visualize it in order to better understand the bigger trends of the data. The first thing we can look at is each state's covid cases and how the infection rate changed after a stay at home order was put into place.
 Since we are looking at a potentially exponential graph, instead of showing the total number of cases we are showing the log of the number of cases. This makes the graph easier to read
 ```{r}
 corona_state_data %>%
@@ -173,11 +173,11 @@ corona_state_data %>%
   ggplot(aes(x = date, y = log_cases,color = in_lockdown, group=state)) + 
   geom_line()
 ```
-As you can see the graph shows a huge boom in cases from march first to late march, but once states started enforcing a stay at home order, the infection rates dropped mostly, however this may not be statistically signiicant because the states which didnt enforce it also had similar trends. These could be attributed to people choosing to stay at home because of the news or other factors as well however.
+As you can see the graph shows a huge boom in cases from march first to late march, but once states started enforcing a stay at home order, the infection rates dropped mostly, however this may not be statistically signiicant because the states which didnt enforce it also had similar trends. These could be attributed to people choosing to stay at home because of the news or other factors as well.
 An interesting thing to take away from this graph is noticing when people's daily lives started changing. It was around mid march. Let's look at some google trends to see how this change affected their searches.
 
 ##Google Trends Representation
-To avoid data clutter lets just search the trends for Maryland instead of every state individually, however you'll find the trends all look similar. First let's model the search rates for coronavirus.
+To avoid data clutter lets just search the trends for Maryland instead of every state individually, however you'll find the trends all look similar. First, let's model the search rates for "coronavirus".
 
 ```{r}
 corona_state_data %>%
@@ -186,7 +186,7 @@ corona_state_data %>%
     geom_line()
 ```
 As you can see the trends peaked mid march when the pandemic was getting scarier and scarier but slowly dropped down as a result of people either losing interest or more likely it became old news to them and went on searching whatever else was new to them.
-Let's look at a more severe case. When coronavirus hit people were much less likely to go out to a packed movie theater. Lets look a the trends for one particular site, Ticketmaster. 
+Let's look at a more severe case. When coronavirus hit, people were much less likely to go out to a packed movie theater. Lets look a the trends for one particular site, Ticketmaster. 
 
 ```{r}
 corona_state_data %>%
@@ -195,7 +195,7 @@ corona_state_data %>%
     geom_line()
 ```
 
-As you can see ticket master was searched very highly before mid march when the spread was minimal but it dropped sharply which makes sense because why buy a ticket if you can't go to the theater.
+As you can see ticket master was searched very highly before mid march when the spread was minimal but it dropped sharply which makes sense because why buy a ticket if you can't go to the theater?
 Finally to account for all the students and workers working from home, let's look up the term "zoom".
 
 ```{r}
@@ -208,8 +208,8 @@ corona_state_data %>%
 As you can see this chart gradually grew representing the increasing number of people trying to use the software and peaked in april when the quarentine started. These searches gradually became less frequent over time as people figured out how the application worked. There are also periodic dips in zoom searches possibly indicating weekends when people aren't working.
 
 ##Death Rates
-One common source of confusion is death rates in america. This can be attributed to low testing. Let's look at the data anyways but remeber to take all of this with a grain of salt as we are only looking at broad trends and are less concerned with individual numbers
-Lets also define death rate to be the number of deaths divided by the number of infected.
+One common source of confusion is death rates in america. This can be attributed to low testing. Let's look at the data anyways but remeber to take all of this with a grain of salt as we are only looking at broad trends and are less concerned with individual numbers.
+Let's also define death rate to be the number of deaths divided by the number of infected or number of current cases.
 First lets make a new dataframe with just the data that we need
 
 ```{r}
@@ -219,7 +219,7 @@ cases_df <- corona_state_data %>%
 cases_df
 ```
 
-Now lets look at the state death rates over timeby using ggplot.
+Now lets look at the state death rates over time using ggplot.
 
 ```{r}
 cases_df %>%
@@ -229,7 +229,7 @@ cases_df %>%
 
 There is a couple main takeaways from this chart. First there are clearly outliers. Those spikes in March were likely caused by the shortage of available tests so the few people that died severly affected the percentage. If you were to do advanced analysis you would likely filter out the data points when the total cases were under 100.
 The second main takeaway is that the deathrates are constantly rising from april 1st to May 1st but have since leveled out. This can be due to the deaths "lagging" behind the positive test count as most people don't die immediately after being tested. We cannot be certain of the exact reason as it may be more closely linked to the number of tests provided at the time.
-The last alarming point is some states are now sitting at a 10 percent deathrate. Well, this goes back to my disclaimer from the beginning. While the coronavirus is something that is extremely severe and should not be taken lightly, many people will contract the disease without getting tested and people typically only get tested when they show severe symptoms and require hospitalization.This may mean that there are a lot more cases of covid then the chart indicates bringing down the percentage. There could also be people passing away from car accidents who get registered as a covid death incorrectly. Needless to say this information should be taken with high skepticism.
+The last alarming point is some states are now sitting at a 10 percent deathrate. Well, this goes back to my disclaimer from the beginning. While the coronavirus is something that is extremely severe and should not be taken lightly, many people will contract the disease without getting tested and people typically only get tested when they show severe symptoms and require hospitalization.This may mean that there are a lot more cases of covid than the chart indicates bringing down the percentage. Needless to say this information should be taken with appropriate skepticism.
 
 ##Cross analysis
 
@@ -243,12 +243,12 @@ corona_state_data %>%
     geom_line(aes(y = sourdough_hits, col = "Searches for sourdough"))
 ```
 
-This is interesting because the number of cases appears to directly affect the rise in peoples interests over sourdough bread possibly caused by stay at home isolation. You can see that this trend is slowly fasing out now because people are onto other hobbies now.
+This is interesting because the number of cases appears to directly affect the rise in people's interests over sourdough bread possibly caused by stay at home isolation. You can see that this trend is slowly fazing out as people find other hobbies.
 
 
 ## Hypothesis Testing
 
-In the above section we looked at a bunch of different data that we have gathered and visualized it. After each one we made some comments on it on why it makes sense that the data looked the way it did. However, we didn't prove anything we just made guesses. Luckily data science gives us tools that can help us make hypothesis for why something happened and can tell us if our hypothesis is correct or not (please dont confuse correlation with causation however! Still be skeptical: https://www.tylervigen.com/spurious-correlations)
+In the above section we looked at a bunch of different data that we have gathered and visualized it. After each one we made some comments on it why it makes sense that the data looked the way it did. However, we didn't prove anything, we just made guesses. Luckily data science gives us tools that can help us make hypotheses for why something happened and can tell us if our hypothesis is correct or not (please dont confuse correlation with causation however! Still be skeptical: https://www.tylervigen.com/spurious-correlations)
 One way to do a hypothesis test is attempting to reject a null hypothesis. This seems very confusing but is actually more simple once explained. Say your friend flipped a coin 10 times and it got 7 heads and 3 tails. You would not be skeptical of a rigged coin because of the small sample size. Even though the coin came up heads 70% of the time there was a chance that this was just random and the next 10 flips would come up 50-50. The null hypothesis represents your theory that the coin just had a "lucky chance". However, if your friend flipped a coin 1000 times and there were 700 heads and 300 tails you would become much more skeptical because even though the coin has the same flip rate, theres a much smaller chance that the rate was achieved on accident and the coin may be rigged.
 In data science we use a confidence interval. This represents the range which we are confident that our data was just a random fluctuation. However we say if the data lies outside of the confidence interval it must be caused by another factor and we can reject the null hypothesis.
 For our example we are going to see if more people searched the word "bread" after being quarentined. The null hypothesis is that the higher number of searches was due to a random fluctuation and not correlated to the stay at home orders. In order to test our hypothesis first we are going to represent the data visually. For each data point we compare that data to if that individual state is in lockdown then we move the datapoints to the corresponding group. We represented the data as a box plot so you could easily see the mean and distribution of the trend.
@@ -260,7 +260,7 @@ corona_state_data %>%
     geom_boxplot()
 ```
 
-As you can see the searches for bread is clearly higher after entering lockdown, however this is not neccecarily caused by the stay at home order. In order to reject the null hypothesis we need to run a hypothesis test. First we will find the mean and standard distribution of each dataset. Those terms describe the shape of the distribution. For more information about the statistics look here: https://www.thoughtco.com/what-is-statistics-3126367
+As you can see the number of searches for bread is clearly higher after entering lockdown. In order to reject the null hypothesis that this relationship is simply due to chance, we need to run a hypothesis test. First we will find the mean and standard distribution of each dataset. Those terms describe the shape of the distribution. For more information about the statistics look here: https://www.thoughtco.com/what-is-statistics-3126367
 
 ```{r}
 summaries <- corona_state_data %>%
@@ -272,7 +272,7 @@ summaries <- corona_state_data %>%
 summaries
 ```
 
-We have the distribution data now we need to run what we call a t-test on the data. Without getting into too mcuh detail (I encourage you to look up the process) it takes your distribution and returns a p-value which represents the probability that your data happened by chance. Interpreting that p-value can be arbitrary so for this example we will say if the p-value is under 0.05 we will be able to reject the null hypothesis demonstrating that there exists a correlation between the data.
+We have the distribution data, now we need to run what we call a t-test on the data. Without getting into too mcuh detail (I encourage you to look up the process) it takes your distribution and returns a p-value which represents the probability that your data happened by chance. Interpreting that p-value can be arbitrary so for this example we will say if the p-value is under 0.05 we will be able to reject the null hypothesis demonstrating that there exists a correlation between the data.
 
 ```{r}
 bread_hits_t_test <- t.test(bread_hits ~ in_lockdown, data = corona_state_data)
@@ -299,6 +299,7 @@ on a scale from 0 to 100, which allows us to make predictions about percent_case
 
 Logistical Regression is trying to find a prediction of the model. It is done by a process called machine learning. Machine learning is a huge topic that is out of the scale of this project but if you want to learn more about it here's a good resource: https://www.sas.com/en_us/insights/analytics/machine-learning.html
 However, taking some of the functions that we will be using as a black box, we will show you how to harness some of the power that comes with machine learning.
+
 Our main goal with regression is finding an accurate model using indicators. Which indicators and how we "train" our data will influence how good our model will become. We will show a whole variation of methods.
 
 The google trends data only goes back 3 months, so we will be discluding data from before that time
@@ -421,4 +422,4 @@ print(paste("Predicted corona cases based on both: ", get_RMSE(model)))
 
 We hope you learned something about data science and maybe something about our changing world. One of the main takeaways for this project is you the datascientist have to be creative and adaptable. It is not straightforward coding and debugging. Sometimes you have to scrap misleading theories because you fail to reject the null hypothesis, sometimes you learn something new halfway through. However, it can be rewarding when you get results.
 Data science is super important in today's world. Whether it's moneyball in sports or financial records or plague predictions, data science gives us a way to model the world around us.
-P.S. remeber to wash your hands.
+P.S. remember to wash your hands.
