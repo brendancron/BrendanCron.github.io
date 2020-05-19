@@ -409,7 +409,6 @@ plot_prediction <- function(model, given_state){
     ggtitle(given_state)
 }
 
-#}
 ```
 
 In order to evaluate how well a model performs, we need a mathematical way to evaluate it.
@@ -462,11 +461,6 @@ Unfortunately, it turns out this model isn't very good. The RMSE is about 32,
 which means the prediction is off by 32ish on average. Also, by looking at the graphs, 
 the prediction is way off from the real data
 
-
-
-
-
-
 Now lets make a model that looks at both date and sourdough hit rates. Will it perform better than just date alone?
 ```{r}
 sour_date_model <- lm(percent_cases ~sourdough_hits*date, data=data_for_model)
@@ -506,8 +500,4 @@ sourdough searches in google improved our models!
 ##Conclusion
 We hope you learned something about data science and maybe something about our changing world. One of the main takeaways for this project is you the datascientist have to be creative and adaptable. It is not straightforward coding and debugging. Sometimes you have to scrap misleading theories because you fail to reject the null hypothesis, sometimes you learn something new halfway through. However, it can be rewarding when you get results.
 Data science is super important in today's world. Whether it's moneyball in sports or financial records or plague predictions, data science gives us a way to model the world around us.
-<<<<<<< HEAD:DataScienceTutorial.rmd
 P.S. remember to wash your hands.
-=======
-P.S. remember to wash your hands.
->>>>>>> da398b383fa81904b0f6e8f56c0e3ba45e7708a1:DataScienceTutorial.Rmd
