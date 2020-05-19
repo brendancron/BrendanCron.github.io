@@ -23,3 +23,11 @@ Lets first look at how to get data from a CSv. For this example we grabbed a dat
 covidData <- read.csv(file = 'covid.csv')
 covidData
 ```
+
+The second part is data scraping. blah blah balh everetts part
+
+## Exploratory Data Analysis
+
+## Hypothesis Testing
+
+## Conclusion
