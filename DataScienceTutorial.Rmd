@@ -243,7 +243,7 @@ corona_state_data %>%
     geom_line(aes(y = sourdough_hits, col = "Searches for sourdough"))
 ```
 
-This is interesting because the number of cases appears to directly affect the rise in people's interests over sourdough bread possibly caused by stay at home isolation. You can see that this trend is slowly fazing out as people find other hobbies.
+This is interesting because the number of cases appears to directly affect the rise in people's interests over sourdough bread possibly caused by stay at home isolation. You can see that this trend is slowly phasing out as people find other hobbies.
 
 
 ## Hypothesis Testing
