@@ -1,1 +1,142 @@
-this a test
+## Machine Learning
+
+
+In this section, we will attempt to predict the number of coronavirus cases in a state based on other factors,
+such as the date, wether or not the state is in lockdown, and finally the amount of google searches for sourdough in that state.
+
+percent_cases is the variable we are trying to predict for each state/date pair.
+percent_cases is a number between 0 and 100. It is represents the number of cases
+as a percentage of the current cases divided by the total cases in that state.
+For example, the total amount of cases washingtown has had is about 19,500. On April 21st, 
+Washington had about 12,300 cases. The percentage of total cases seen for Washington on April 21st would be 
+100*12,300/19,500, yielding about 63. 63 will be the value of percent_cases for this state/date pair.
+
+Having percent_cases allows us to make more meaningful comparisons between states. All the data is 
+on a scale from 0 to 100, which allows us to make predictions about percent_cases using ALL the data.
+
+
+->Explain regression here ig
+
+
+The google trends data only goes back 3 months, so we will be discluding data from before that time
+```{r}
+data_for_model <- corona_state_data %>%
+  filter(date > "2020-2-25")
+
+
+```
+
+Below is a function that plots the predicted value for percent_cases 
+based on the model provided and the actual value of percent_cases over time
+[keep going here]
+```{r}
+
+plot_prediction <- function(model, given_state){
+  predictions <- model %>% predict(data_for_model)
+  
+  corona_state_data_with_predictions <- data_for_model %>%
+    mutate(prediction = predictions[row_number()])
+  
+  corona_state_data_with_predictions %>%
+    filter(state == given_state) %>%
+    ggplot(aes(x = date)) + 
+    geom_line(aes(y = prediction, col = "Predicted Cases"))  +
+    geom_line(aes(y = percent_cases, col = "Cases")) + 
+    ggtitle(given_state)
+}
+
+#}
+```
+
+Creating function to calculate RMSE- root mean squared error of a model
+```{r}
+
+get_RMSE <- function(model){
+  
+  predictions <- model %>% predict(data_for_model)
+  return(Metrics::rmse(data_for_model$percent_cases, predictions))
+}
+
+```
+
+
+
+
+Linear Regression model based on date
+```{r}
+date_model <- lm(percent_cases ~date, data=data_for_model)
+
+plot_prediction(date_model, "New York")
+plot_prediction(date_model, "Maryland")
+plot_prediction(date_model, "Alaska")
+plot_prediction(date_model, "Arizona")
+plot_prediction(date_model, "Washington")
+
+print(paste("RMSE: ", get_RMSE(date_model)))
+
+```
+
+
+Linear Regression model based on sourdough_hits
+```{r}
+sour_model <- lm(percent_cases ~sourdough_hits, data=data_for_model)
+
+plot_prediction(sour_model, "New York")
+plot_prediction(sour_model, "Maryland")
+plot_prediction(sour_model, "Alaska")
+plot_prediction(sour_model, "Arizona")
+plot_prediction(sour_model, "Washington")
+
+print(paste("RMSE: ", get_RMSE(sour_model)))
+
+```
+
+Linear Regression model based on sourdough_hits and date
+```{r}
+sour_date_model <- lm(percent_cases ~sourdough_hits*date, data=data_for_model)
+
+plot_prediction(sour_date_model, "New York")
+plot_prediction(sour_date_model, "Maryland")
+plot_prediction(sour_date_model, "Alaska")
+plot_prediction(sour_date_model, "Arizona")
+plot_prediction(sour_date_model, "Washington")
+
+print(paste("RMSE: ", get_RMSE(sour_date_model)))
+
+```
+Linear Regression model based on wether or not a state is in lockdown and date
+```{r}
+lockdown_date_model <- lm(percent_cases ~in_lockdown*date, data=data_for_model)
+
+plot_prediction(lockdown_date_model, "New York")
+plot_prediction(lockdown_date_model, "Maryland")
+plot_prediction(lockdown_date_model, "Alaska")
+plot_prediction(lockdown_date_model, "Arizona")
+plot_prediction(lockdown_date_model, "Washington")
+
+print(paste("RMSE: ", get_RMSE(lockdown_date_model)))
+
+```
+
+
+```{r}
+data_for_model <- corona_state_data %>%
+  filter(date > "2020-2-25") %>%
+  filter(state == "New York")
+
+model <- lm(percent_cases ~sourdough_hits, data=data_for_model)
+
+plot_prediction(model, "New York")
+print(paste("Predicted corona cases based on sourdough: ", get_RMSE(model)))
+
+
+model <- lm(percent_cases ~date, data=data_for_model)
+
+plot_prediction(model, "New York")
+print(paste("Predicted corona cases based on date: ", get_RMSE(model)))
+
+model <- lm(percent_cases ~sourdough_hits*date, data=data_for_model)
+
+plot_prediction(model, "New York")
+print(paste("Predicted corona cases based on both: ", get_RMSE(model)))
+```
