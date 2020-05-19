@@ -240,28 +240,75 @@ print(paste("p-value = ", bread_hits_t_test$p.value))
 ```
 We ended up with an extremely small p-value. Therefore we can reject the null hypothesis! This means by some force the coronavirus lockdown was related to the amount of people googling bread. Exciting stuff! However, do not confuse the fancy graphs and functions with proof of causation. Hypothesis testing can only show correlation.
 ## Machine Learning
-In this section, we will attempt to predict the number of coronavirus cases in a state based on other factors,
-such as the date, wether or not the state is in lockdown, and finally the amount of google searches for sourdough in that state.
-percent_cases is the variable we are trying to predict for each state/date pair.
-percent_cases is a number between 0 and 100. It is represents the number of cases
-as a percentage of the current cases divided by the total cases in that state.
+Before training our model and using machine learning, let's talk about what those terms actually mean.
+
+All of the data we have gathered is stored in a dataframe, which is basically just a giant fancy excel spreadsheet. 
+Each row in this table represents an entity. In our dataframe, an entity is defined by a state and a date. 
+Each entity is unique, for example there is only one entity for Wyoming on February 27th. Each entity also stores other data, called
+attributes. Examples of attributes for our dataset would be the number of cases on a day, number of hits for a given search term, 
+and wether or not a state is in lockdown. Each attribute is stored in a column. By storing the data like this, it is easy to manipulate the data and answer questions. The following shows the beginning of this dataframe:
+
+```{r}
+corona_state_data %>% slice(2000:20005)
+```
+
+Lets briefly talk about what some of these terms represent. The state and date column define the entity. This pair can be used to 
+uniquely identify a row in the dataframe. The number of cases and deaths are stored in cases and deaths, respectively. 
+lockdown_start gives the date lockdown started, or NA if the state never went into lockdown. The in_lockdown column has a value of TRUE if the state 
+is in lockdown on that date, and false otherwise. The columns that end in _hits represent the google search popularity for a particular term.
+The Sourdough_hits column shows the popularity of the term sourdough on a scale from 0 to 100. 0 means that there was not enough data, and 
+100 means that the poplarity peaked in the state on that date. Other values represent the percent of peak popularity. So a value of 50
+means that a term is half as popular on the given date as its peak popularity. This scale of 0-100 for each state allows us to compare them,
+even if New York had 10 times as much search traffic as North Dakota, both show hits data on a scale from 0-100. 
+Similarly, percent_cases is a number between 0 and 100. It represents the number of cases
+as a percentage of peak cases in that state.
 For example, the total amount of cases washingtown has had is about 19,500. On April 21st, 
 Washington had about 12,300 cases. The percentage of total cases seen for Washington on April 21st would be 
 100*12,300/19,500, yielding about 63. 63 will be the value of percent_cases for this state/date pair.
-Having percent_cases allows us to make more meaningful comparisons between states. All the data is 
-on a scale from 0 to 100, which allows us to make predictions about percent_cases using ALL the data.
-Logistical Regression is trying to find a prediction of the model. It is done by a process called machine learning. Machine learning is a huge topic that is out of the scale of this project but if you want to learn more about it here's a good resource: https://www.sas.com/en_us/insights/analytics/machine-learning.html
+
+
+For a given date/state pair, What if we covered up the percent_cases attribute and couldn't see it? Could we guess a value for it based on 
+the values of all the other attributes? This is the problem a model attempts to solve. It looks at the attriubtesthat we know for an entity , does 
+some math behind the scenes, and spits out a predict for the value we don't know. Having this model is useful, because if there is data we don't 
+have, we can predict it. This is all well and good, but how do we get a model
+that accurately predicts the missing attributes? The answer, is machine learning. Machine learning 
+takes in huge datasets, crunches the numbers, and creates a model.
+
+How does machien learning work? There is a wide variety of algorithms that use machine learning to create models, but
+the one we will be using is linear regression. It is easy to use but still has predictive power. Given an oucome we want to predict,
+we tell it which attributes to look at. We also feed it training data, which is the data we already have values for.
+It converts all these attributes into numbers, then multiplies them by constants 
+and with each other. It adds and subtracts these numbers and creates a prediction. Luckily for us, these constants are found behind the scenes. If you want to learn more about it here's a good resource: https://www.sas.com/en_us/insights/analytics/machine-learning.html
 However, taking some of the functions that we will be using as a black box, we will show you how to harness some of the power that comes with machine learning.
-Our main goal with regression is finding an accurate model using indicators. Which indicators and how we "train" our data will influence how good our model will become. We will show a whole variation of methods.
-The google trends data only goes back 3 months, so we will be discluding data from before that time
+
+Okay, enough background stuff, let's get predicting!
+
+The google trends data only goes back 3 months, so we will be discluding data from before that time. 
+We do that by filtering that dataset and only keeping entities that have a date after February 25th
 ```{r}
 data_for_model <- corona_state_data %>%
   filter(date > "2020-2-25")
 ```
-Below is a function that plots the predicted value for percent_cases 
-based on the model provided and the actual value of percent_cases over time
+
+
+Before we create our models, we are first going to create
+functions to help evaluate these models. The first one will help 
+visualize the model and help us see what it does, and the second will 
+give a number that tells how well a model performs.
+
+
+
+Below is a function that makes a graph of the predicted value for percent_cases 
+based on the model provided and the actual value of percent_cases over time.
+First, it generates a vector(a list of numbers) of predictions, using the
+predict function. This function takes a model and data, and spits out what the model 
+predicts for each entity. 
+
+Next, these predictions are combined with the data and put into a dataframe called corona_state_data_with_predictions.
+Using the data in this dataframe, the function plots the predicted case amount and the actual case amount for the specified state
 [keep going here]
 ```{r}
+
 plot_prediction <- function(model, given_state){
   predictions <- model %>% predict(data_for_model)
   
@@ -275,70 +322,110 @@ plot_prediction <- function(model, given_state){
     geom_line(aes(y = percent_cases, col = "Cases")) + 
     ggtitle(given_state)
 }
+
 #}
 ```
-Creating function to calculate RMSE- root mean squared error of a model
+
+In order to evaluate how well a model performs, we need a mathematical way to evaluate it.
+If we didn't, we would have to look at the plot for each of the 50 states and guess about how well it did for each of them.
+That is too difficult for a person! But computers can perform millions of calculations per second, so they are well suited to evaluate
+these models. This function calculates the difference between the prediction and the real value of cases. Then it squares this number. It
+does this for every entity in the dataframe and takes the average. Then it takes the square root to put the value back into meaningful units.
+The scoring is like golf, a low score is better than a high score. 0 is a perfect score. This metric is called the Root Mean Square Error (RMSE)
 ```{r}
+
 get_RMSE <- function(model){
   
   predictions <- model %>% predict(data_for_model)
   return(Metrics::rmse(data_for_model$percent_cases, predictions))
 }
+
 ```
-Linear Regression model based on date
+
+Now we have all the tools to create our first model! First we will see how well we can
+predict cases based on just the date. The lm function creates a model for us. 
+We will plot the predictions for this model in New York, Maryland, Arizona, and Washington to show how it performs.
 ```{r}
 date_model <- lm(percent_cases ~date, data=data_for_model)
+
 plot_prediction(date_model, "New York")
 plot_prediction(date_model, "Maryland")
-plot_prediction(date_model, "Alaska")
 plot_prediction(date_model, "Arizona")
 plot_prediction(date_model, "Washington")
+
 print(paste("RMSE: ", get_RMSE(date_model)))
+
 ```
-Linear Regression model based on sourdough_hits
+A few things to note from the above model, it is the same prediction for each state. This is because 
+the only thing it is basing its prediction off of is the date. The RMSE is relatively low, with a value of 12.9 
+That means that on average, this model is off by 12.9.
+
+
+
+
+
+
+
+
+
+
+Next we will create a model based on the search popularity of "sourdough". Is that all it takes to predict the amount of coronavirus in a region
 ```{r}
 sour_model <- lm(percent_cases ~sourdough_hits, data=data_for_model)
+
 plot_prediction(sour_model, "New York")
 plot_prediction(sour_model, "Maryland")
-plot_prediction(sour_model, "Alaska")
 plot_prediction(sour_model, "Arizona")
 plot_prediction(sour_model, "Washington")
+
 print(paste("RMSE: ", get_RMSE(sour_model)))
+
 ```
-Linear Regression model based on sourdough_hits and date
+Unfortunately, it turns out this model isn't very good. The RMSE is about 32,
+which means the prediction is off by 32ish on average. Also, by looking at the graphs, 
+the prediction is way off from the real data
+
+
+
+
+
+
+Now lets make a model that looks at both date and sourdough hit rates. Will it perform better than just date alone?
 ```{r}
 sour_date_model <- lm(percent_cases ~sourdough_hits*date, data=data_for_model)
+
 plot_prediction(sour_date_model, "New York")
 plot_prediction(sour_date_model, "Maryland")
-plot_prediction(sour_date_model, "Alaska")
 plot_prediction(sour_date_model, "Arizona")
 plot_prediction(sour_date_model, "Washington")
+
 print(paste("RMSE: ", get_RMSE(sour_date_model)))
+
 ```
-Linear Regression model based on wether or not a state is in lockdown and date
+The answer is yes! This model is slightly better than the others, with a RMSE of 11.9. This value is about 1 lower than for the model based on dates.
+
+
+
+
+Finally, this is a model that tries to predict cases based on wether or not the state is in lockdown as well as the date. 
 ```{r}
 lockdown_date_model <- lm(percent_cases ~in_lockdown*date, data=data_for_model)
+
 plot_prediction(lockdown_date_model, "New York")
 plot_prediction(lockdown_date_model, "Maryland")
-plot_prediction(lockdown_date_model, "Alaska")
 plot_prediction(lockdown_date_model, "Arizona")
 plot_prediction(lockdown_date_model, "Washington")
+
 print(paste("RMSE: ", get_RMSE(lockdown_date_model)))
+
 ```
-```{r}
-data_for_model <- corona_state_data %>%
-  filter(date > "2020-2-25") %>%
-  filter(state == "New York")
-model <- lm(percent_cases ~sourdough_hits, data=data_for_model)
-plot_prediction(model, "New York")
-print(paste("Predicted corona cases based on sourdough: ", get_RMSE(model)))
-model <- lm(percent_cases ~date, data=data_for_model)
-plot_prediction(model, "New York")
-print(paste("Predicted corona cases based on date: ", get_RMSE(model)))
-model <- lm(percent_cases ~sourdough_hits*date, data=data_for_model)
-plot_prediction(model, "New York")
-print(paste("Predicted corona cases based on both: ", get_RMSE(model)))
-```
+This is the best model we've made so far, with a RMSE of 11.7. 
+
+
+Overall, these models are okay. Remeber, it was trained on data from the whole country. Each state has a very different picture, so it is 
+difficult to predict cases based on all states and have it perform extremely well on one state. However, it is interesting that including 
+sourdough searches in google improved our models!
+
 ##Conclusion
 We hope you learned something about data science and maybe something about our changing world. One of the main takeaways for this project is you the datascientist have to be creative and adaptable. It is not straightforward coding and debugging. Sometimes you have to scrap misleading theories because you fail to reject the null hypothesis, sometimes you learn something new halfway through. However, it can be rewarding when you get results.
 Data science is super important in today's world. Whether it's moneyball in sports or financial records or plague predictions, data science gives us a way to model the world around us.
