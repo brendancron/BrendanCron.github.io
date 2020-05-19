@@ -70,7 +70,7 @@ lockdown_data <- lockdown_data %>%
     filter(state %in% state_codes$State)
 ```
 
-##Joining dataframes
+## Joining dataframes
 One of the most important concepts of data science is joining dataframes. When we want to compare data from 2 different areas usually it is difficult to find a CSV that already has data on both datasets. What we do instead is find 2 dataframes with similar attributes and perform a join on the dataframes effectively merging the data. For this example we will merge together the state data we got from the CSV and the lockdown data that we scraped from Wikipedia. The attribute that we will join on is the state.
 
 ```{r}
@@ -78,6 +78,7 @@ full_state_data <- corona_state_data_formatted %>%
     left_join(lockdown_data, by = "state") %>%
     mutate(in_lockdown = ifelse(is.na(lockdown_start), F, ifelse(date >= lockdown_start, T,F)))
 ```
+
 Another area that we want to look at for our project is google trends. This will give us search records for what people searched during which periods of time. This can give us insights on people's behaviors and also interests. Luckily google provides easy methods to download a CSV with this data but to make our code less repetitive, below we made a function that takes in a term and returns a dataframe containing the data for each term and the popularity of that term for each state. 
 
 Another area that we want to look at for our project is google trends. This will give us search records for what people searched during which periods of time. This can give us insights on people's behaviors and also interests. Luckily google provides easy methods to download a CSV with this data but to make our code less repetitive, below we made a function that takes in a term and returns a dataframe containing the data for each term and the popularity of that term for each state. 
@@ -107,6 +108,7 @@ get_term <- function(term){
   return(all_trends)
 }
 ```
+
 Note: only data from last 90 days is included
 Now we use this function above to create new dataframes with all of the data from the trends. We noticed pulling the data from google takes a while, expect 20-30 seconds per term. Additionally sometimes it just fails, the gtrends() doesn't always work. The two trends that we will specifically look at are coronavirus and sourdough.
 
@@ -119,6 +121,7 @@ Now we use this function above to create new dataframes with all of the data fro
 #ticketmaster_term <- get_term("ticketmaster")
 #zoom_term <- get_term("zoom")
 ```
+
 Unfortunately this code chunk above didn't seem to be the most reliable, not due to our code, but sometimes google trends got flooded with requests and failed. Our solution to this was run each term but ultimately save the data as a csv and just read it from that. The above code technically works however it can be inconsistent
 
 Unfortunately this code chunk above didn't seem to be the most reliable, not due to our code, but sometimes google trends got flooded with requests and failed. Our solution to this was run each term but ultimately save the data as a csv and just read it from that. The above code technically works however it can be inconsistent
@@ -130,6 +133,7 @@ write.csv(bread_term,"bread_term.csv",row.names = FALSE)
 write.csv(ticketmaster_term,"ticketmaster_term.csv",row.names = FALSE)
 write.csv(zoom_term,"zoom_term.csv",row.names = FALSE)
 ```
+
 Here is the code from when we actually run the code in order to be more consistent. Remember this code is completely optional we just did it so our code would run faster on average case
 
 Here is the code from when we actually run the code in order to be more consistent. Remember this code is completely optional we just did it so our code would run faster on average case
@@ -141,7 +145,9 @@ bread_term <- read_csv(paste(getwd(), "/bread_term.csv", sep = ""))
 ticketmaster_term <- read_csv(paste(getwd(), "/ticketmaster_term.csv", sep = ""))
 zoom_term <- read_csv(paste(getwd(), "/zoom_term.csv", sep = ""))
 ```
+
 Now that we have all of the term dataframes we can join them with our other data frame to get a full summary of any data that may seem interesting to us to use for analysis!
+
 ```{r}
 corona_state_data <- full_state_data
 corona_state_data <-  corona_state_data %>% left_join(coronavirus_term, by = c("state","date"))
@@ -151,6 +157,7 @@ corona_state_data <-  corona_state_data %>% left_join(ticketmaster_term, by = c(
 corona_state_data <-  corona_state_data %>% left_join(zoom_term, by = c("state","date"))
 corona_state_data
 ```
+
 One last thing we will do to our dataframe is add some normalized data which we will use later on in the project. Normalizing data is just a fancy way of saying that we're changing the range of the data but keeping the distribution shape. In this case we are putting the cases and deaths on a zero to 100 scale so we can more easily reference them in the future in comparison to trends which also exist on a zero to 100 scale. You can visit this youtube link to learn more about data normalization in R: https://www.youtube.com/watch?v=hot0Wxt9lpQ
 
 One last thing we will do to our dataframe is add some normalized data which we will use later on in the project. Normalizing data is just a fancy way of saying that we're changing the range of the data but keeping the distribution shape. In this case we are putting the cases and deaths on a zero to 100 scale so we can more easily reference them in the future in comparison to trends which also exist on a zero to 100 scale. You can visit this youtube link to learn more about data normalization in R: https://www.youtube.com/watch?v=hot0Wxt9lpQ
@@ -165,64 +172,80 @@ corona_state_data <- corona_state_data %>%
   mutate(percent_deaths = 100*deaths/max_deaths) 
   
 ```
+
 ## Exploratory data analysis
 Great! Now we have all of our data! what can we do with it? One thing that we can do is visualize it in order to better understand the bigger trends of the data. The first thing we can look at is each state's covid cases and how the infection rate changed after a stay at home order was put into place.
 Since we are looking at a potentially exponential graph, instead of showing the total number of cases we are showing the log of the number of cases. This makes the graph easier to read
+
 ```{r}
 corona_state_data %>%
   mutate(log_cases = log2(cases)) %>%
   ggplot(aes(x = date, y = log_cases,color = in_lockdown, group=state)) + 
   geom_line()
 ```
+
 As you can see the graph shows a huge boom in cases from march first to late march, but once states started enforcing a stay at home order, the infection rates dropped mostly, however this may not be statistically signiicant because the states which didnt enforce it also had similar trends. These could be attributed to people choosing to stay at home because of the news or other factors as well.
 An interesting thing to take away from this graph is noticing when people's daily lives started changing. It was around mid march. Let's look at some google trends to see how this change affected their searches.
-##Google Trends Representation
+
+## Google Trends Representation
 To avoid data clutter lets just search the trends for Maryland instead of every state individually, however you'll find the trends all look similar. First, let's model the search rates for "coronavirus".
+
 ```{r}
 corona_state_data %>%
     filter(state=="Maryland") %>%
     ggplot(mapping=aes(x=date, y=coronavirus_hits, group=state)) +
     geom_line()
 ```
+
 As you can see the trends peaked mid march when the pandemic was getting scarier and scarier but slowly dropped down as a result of people either losing interest or more likely it became old news to them and went on searching whatever else was new to them.
 Let's look at a more severe case. When coronavirus hit, people were much less likely to go out to a packed movie theater. Lets look a the trends for one particular site, Ticketmaster. 
+
 ```{r}
 corona_state_data %>%
     filter(state=="Maryland") %>%
     ggplot(mapping=aes(x=date, y=ticketmaster_hits, group=state)) +
     geom_line()
 ```
+
 As you can see ticket master was searched very highly before mid march when the spread was minimal but it dropped sharply which makes sense because why buy a ticket if you can't go to the theater?
 Finally to account for all the students and workers working from home, let's look up the term "zoom".
+
 ```{r}
 corona_state_data %>%
     filter(state=="Maryland") %>%
     ggplot(mapping=aes(x=date, y=zoom_hits, group=state)) +
     geom_line()
 ```
+
 As you can see this chart gradually grew representing the increasing number of people trying to use the software and peaked in april when the quarentine started. These searches gradually became less frequent over time as people figured out how the application worked. There are also periodic dips in zoom searches possibly indicating weekends when people aren't working.
-##Death Rates
+
+## Death Rates
 One common source of confusion is death rates in america. This can be attributed to low testing. Let's look at the data anyways but remeber to take all of this with a grain of salt as we are only looking at broad trends and are less concerned with individual numbers.
 Let's also define death rate to be the number of deaths divided by the number of infected or number of current cases.
 First lets make a new dataframe with just the data that we need
+
 ```{r}
 cases_df <- corona_state_data %>%
   select(state, date, cases, deaths) %>%
   mutate(death_rate = ((1.0*deaths)/cases))
 cases_df
 ```
+
 Now lets look at the state death rates over time using ggplot.
+
 ```{r}
 cases_df %>%
   ggplot(aes(x= date, y=death_rate, group=factor(state))) +
   geom_line()
 ```
+
 There is a couple main takeaways from this chart. First there are clearly outliers. Those spikes in March were likely caused by the shortage of available tests so the few people that died severly affected the percentage. If you were to do advanced analysis you would likely filter out the data points when the total cases were under 100.
 The second main takeaway is that the deathrates are constantly rising from april 1st to May 1st but have since leveled out. This can be due to the deaths "lagging" behind the positive test count as most people don't die immediately after being tested. We cannot be certain of the exact reason as it may be more closely linked to the number of tests provided at the time.
 The last alarming point is some states are now sitting at a 10 percent deathrate. Well, this goes back to my disclaimer from the beginning. While the coronavirus is something that is extremely severe and should not be taken lightly, many people will contract the disease without getting tested and people typically only get tested when they show severe symptoms and require hospitalization.This may mean that there are a lot more cases of covid than the chart indicates bringing down the percentage. Needless to say this information should be taken with appropriate skepticism.
 
-##Cross analysis
+## Cross analysis
 Not that we have viewed and interpreted different data lets combine two different factors to see how they relate. For example, here is a comparison of searches for "sourdough", and the number of cases of coronavirus in NY which we normalized earlier
+
 ```{r}
 corona_state_data %>%
     filter(state == "New York") %>%
@@ -230,6 +253,7 @@ corona_state_data %>%
     geom_line(aes(y = percent_cases, col = "Percent of max cases")) + 
     geom_line(aes(y = sourdough_hits, col = "Searches for sourdough"))
 ```
+
 This is interesting because the number of cases appears to directly affect the rise in people's interests over sourdough bread possibly caused by stay at home isolation. You can see that this trend is slowly phasing out as people find other hobbies.
 
 ## Hypothesis Testing
@@ -238,13 +262,13 @@ In the above section we looked at a bunch of different data that we have gathere
 One way to do a hypothesis test is attempting to reject a null hypothesis. This seems very confusing but is actually more simple once explained. Say your friend flipped a coin 10 times and it got 7 heads and 3 tails. You would not be skeptical of a rigged coin because of the small sample size. Even though the coin came up heads 70% of the time there was a chance that this was just random and the next 10 flips would come up 50-50. The null hypothesis represents your theory that the coin just had a "lucky chance". However, if your friend flipped a coin 1000 times and there were 700 heads and 300 tails you would become much more skeptical because even though the coin has the same flip rate, theres a much smaller chance that the rate was achieved on accident and the coin may be rigged.
 In data science we use a confidence interval. This represents the range which we are confident that our data was just a random fluctuation. However we say if the data lies outside of the confidence interval it must be caused by another factor and we can reject the null hypothesis.
 For our example we are going to see if more people searched the word "bread" after being quarentined. The null hypothesis is that the higher number of searches was due to a random fluctuation and not correlated to the stay at home orders. In order to test our hypothesis first we are going to represent the data visually. For each data point we compare that data to if that individual state is in lockdown then we move the datapoints to the corresponding group. We represented the data as a box plot so you could easily see the mean and distribution of the trend.
+
 ```{r}
 corona_state_data %>% 
     filter(!is.na(bread_hits)) %>%
     ggplot(mapping=aes(x=in_lockdown, y=bread_hits)) +
     geom_boxplot()
 ```
-As you can see the number of searches for bread is clearly higher after entering lockdown. In order to reject the null hypothesis that this relationship is simply due to chance, we need to run a hypothesis test. First we will find the mean and standard distribution of each dataset. Those terms describe the shape of the distribution. For more information about the statistics look here: https://www.thoughtco.com/what-is-statistics-3126367
 
 As you can see the number of searches for bread is clearly higher after entering lockdown. In order to reject the null hypothesis that this relationship is simply due to chance, we need to run a hypothesis test. First we will find the mean and standard distribution of each dataset. Those terms describe the shape of the distribution. For more information about the statistics look here: https://www.thoughtco.com/what-is-statistics-3126367
 
@@ -257,6 +281,7 @@ summaries <- corona_state_data %>%
             sd_bread_hits = sd(bread_hits))
 summaries
 ```
+
 We have the distribution data, now we need to run what we call a t-test on the data. Without getting into too mcuh detail (I encourage you to look up the process) it takes your distribution and returns a p-value which represents the probability that your data happened by chance. Interpreting that p-value can be arbitrary so for this example we will say if the p-value is under 0.05 we will be able to reject the null hypothesis demonstrating that there exists a correlation between the data.
 
 We have the distribution data, now we need to run what we call a t-test on the data. Without getting into too mcuh detail (I encourage you to look up the process) it takes your distribution and returns a p-value which represents the probability that your data happened by chance. Interpreting that p-value can be arbitrary so for this example we will say if the p-value is under 0.05 we will be able to reject the null hypothesis demonstrating that there exists a correlation between the data.
@@ -265,6 +290,7 @@ We have the distribution data, now we need to run what we call a t-test on the d
 bread_hits_t_test <- t.test(bread_hits ~ in_lockdown, data = corona_state_data)
 print(paste("p-value = ", bread_hits_t_test$p.value))
 ```
+
 We ended up with an extremely small p-value. Therefore we can reject the null hypothesis! This means by some force the coronavirus lockdown was related to the amount of people googling bread. Exciting stuff! However, do not confuse the fancy graphs and functions with proof of causation. Hypothesis testing can only show correlation.
 
 ## Machine Learning
@@ -310,19 +336,15 @@ It converts all these attributes into numbers, then multiplies them by constants
 and with each other. It adds and subtracts these numbers and creates a prediction. Luckily for us, these constants are found behind the scenes. If you want to learn more about it here's a good resource: https://www.sas.com/en_us/insights/analytics/machine-learning.html
 However, taking some of the functions that we will be using as a black box, we will show you how to harness some of the power that comes with machine learning.
 
-
-
-
 Okay, enough background stuff, let's get predicting!
 
 The google trends data only goes back 3 months, so we will be discluding data from before that time. 
 We do that by filtering that dataset and only keeping entities that have a date after February 25th
+
 ```{r}
 data_for_model <- corona_state_data %>%
   filter(date > "2020-2-25")
 ```
-
-
 
 Before we create our models, we are first going to create
 functions to help evaluate these models. The first one will help 
@@ -339,7 +361,7 @@ predicts for each entity.
 
 Next, these predictions are combined with the data and put into a dataframe called corona_state_data_with_predictions.
 Using the data in this dataframe, the function plots the predicted case amount and the actual case amount for the specified state
-[keep going here]
+
 ```{r}
 
 plot_prediction <- function(model, given_state){
@@ -365,6 +387,7 @@ That is too difficult for a person! But computers can perform millions of calcul
 these models. This function calculates the difference between the prediction and the real value of cases. Then it squares this number. It
 does this for every entity in the dataframe and takes the average. Then it takes the square root to put the value back into meaningful units.
 The scoring is like golf, a low score is better than a high score. 0 is a perfect score. This metric is called the Root Mean Square Error (RMSE)
+
 ```{r}
 
 get_RMSE <- function(model){
@@ -378,6 +401,7 @@ get_RMSE <- function(model){
 Now we have all the tools to create our first model! First we will see how well we can
 predict cases based on just the date. The lm function creates a model for us. 
 We will plot the predictions for this model in New York, Maryland, Arizona, and Washington to show how it performs.
+
 ```{r}
 date_model <- lm(percent_cases ~date, data=data_for_model)
 
@@ -389,20 +413,13 @@ plot_prediction(date_model, "Washington")
 print(paste("RMSE: ", get_RMSE(date_model)))
 
 ```
+
 A few things to note from the above model, it is the same prediction for each state. This is because 
 the only thing it is basing its prediction off of is the date. The RMSE is relatively low, with a value of 12.9 
 That means that on average, this model is off by 12.9.
 
-
-
-
-
-
-
-
-
-
 Next we will create a model based on the search popularity of "sourdough". Is that all it takes to predict the amount of coronavirus in a region
+
 ```{r}
 sour_model <- lm(percent_cases ~sourdough_hits, data=data_for_model)
 
@@ -414,16 +431,13 @@ plot_prediction(sour_model, "Washington")
 print(paste("RMSE: ", get_RMSE(sour_model)))
 
 ```
+
 Unfortunately, it turns out this model isn't very good. The RMSE is about 32,
 which means the prediction is off by 32ish on average. Also, by looking at the graphs, 
 the prediction is way off from the real data
 
-
-
-
-
-
 Now let's make a model that looks at both date and sourdough hit rates. Will it perform better than just date alone?
+
 ```{r}
 sour_date_model <- lm(percent_cases ~sourdough_hits*date, data=data_for_model)
 
@@ -435,12 +449,11 @@ plot_prediction(sour_date_model, "Washington")
 print(paste("RMSE: ", get_RMSE(sour_date_model)))
 
 ```
+
 The answer is yes! This model is slightly better than the others, with a RMSE of 11.9. This value is about 1 lower than for the model based on dates.
 
+Finally, this is a model that tries to predict cases based on wether or not the state is in lockdown as well as the date.
 
-
-
-Finally, this is a model that tries to predict cases based on wether or not the state is in lockdown as well as the date. 
 ```{r}
 lockdown_date_model <- lm(percent_cases ~in_lockdown*date, data=data_for_model)
 
@@ -452,14 +465,14 @@ plot_prediction(lockdown_date_model, "Washington")
 print(paste("RMSE: ", get_RMSE(lockdown_date_model)))
 
 ```
-This is the best model we've made so far, with a RMSE of 11.7. 
 
+This is the best model we've made so far, with a RMSE of 11.7. 
 
 Overall, these models are okay. Remember, it was trained on data from the whole country. Each state has a very different picture, so it is 
 difficult to predict cases based on all states and have it perform extremely well on one state. However, it is interesting that including 
 sourdough searches in google improved our models!
 
-##Conclusion
+## Conclusion
 We hope you learned something about data science and maybe something about our changing world. One of the main takeaways for this project is you the datascientist have to be creative and adaptable. It is not straightforward coding and debugging. Sometimes you have to scrap misleading theories because you fail to reject the null hypothesis, sometimes you learn something new halfway through. However, it can be rewarding when you get results.
 Data science is super important in today's world. Whether it's moneyball in sports or financial records or plague predictions, data science gives us a way to model the world around us.
 P.S. remember to wash your hands.
